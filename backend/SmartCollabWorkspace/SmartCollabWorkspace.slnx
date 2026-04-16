@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="../SmartCollab.Core/SmartCollab.Core.csproj" />
+  <Project Path="../SmartCollab.Infrastructure/SmartCollab.Infrastructure.csproj" />
+  <Project Path="SmartCollab.API/SmartCollab.API.csproj" />
+</Solution>
