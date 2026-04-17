@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using SmartCollab.Core.Interfaces;
+
 // OpenAPI models removed to avoid direct dependency on Microsoft.OpenApi types
 using SmartCollab.Infrastructure;
 using SmartCollab.Infrastructure.Data;
+using SmartCollab.Infrastructure.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +19,10 @@ builder.Services.AddSwaggerGen();
 
 // Add Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
-
+// Add services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 // Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
