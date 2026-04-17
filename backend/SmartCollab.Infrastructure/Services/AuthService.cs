@@ -1,8 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using BCrypt.Net;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +6,9 @@ using SmartCollab.Core.DTOs;
 using SmartCollab.Core.Entities;
 using SmartCollab.Core.Interfaces;
 using SmartCollab.Infrastructure.Data;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace SmartCollab.Infrastructure.Services;
 
@@ -40,12 +39,7 @@ public class AuthService : IAuthService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
-            Role = "Member",
-            OwnedWorkspaces = new List<Workspace>(),
-            WorkspaceMembers = new List<WorkspaceMember>(),
-            AssignedTasks = new List<TaskItem>(),
-            CreatedTasks = new List<TaskItem>(),
-            UploadedFiles = new List<FileEntity>()
+            Role = "Member"
         };
 
         _context.Users.Add(user);

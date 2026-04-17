@@ -30,7 +30,7 @@ public class WorkspaceService : IWorkspaceService
                 Id = wm.Workspace.Id,
                 Name = wm.Workspace.Name,
                 Description = wm.Workspace.Description,
-                OwnerName = wm.Workspace.Owner.FirstName + " " + wm.Workspace.Owner.LastName,
+                OwnerName = $"{wm.Workspace.Owner.FirstName} {wm.Workspace.Owner.LastName}",
                 CreatedAt = wm.Workspace.CreatedAt,
                 MemberCount = wm.Workspace.Members.Count,
                 TaskCount = wm.Workspace.Tasks.Count
@@ -47,16 +47,13 @@ public class WorkspaceService : IWorkspaceService
             Name = dto.Name,
             Description = dto.Description,
             OwnerId = userId,
-            CreatedAt = DateTime.UtcNow,
-            Members = new List<WorkspaceMember>(),
-            Tasks = new List<TaskItem>(),
-            Files = new List<FileEntity>()
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Workspaces.Add(workspace);
         await _context.SaveChangesAsync();
 
-        // Add owner as member
+        // Add owner as Admin member
         var workspaceMember = new WorkspaceMember
         {
             WorkspaceId = workspace.Id,
@@ -75,7 +72,7 @@ public class WorkspaceService : IWorkspaceService
             Id = workspace.Id,
             Name = workspace.Name,
             Description = workspace.Description,
-            OwnerName = owner != null ? $"{owner.FirstName} {owner.LastName}" : "",
+            OwnerName = $"{owner?.FirstName} {owner?.LastName}",
             CreatedAt = workspace.CreatedAt,
             MemberCount = 1,
             TaskCount = 0
@@ -133,7 +130,7 @@ public class WorkspaceService : IWorkspaceService
             {
                 Id = wm.Id,
                 UserId = wm.UserId,
-                UserName = wm.User.FirstName + " " + wm.User.LastName,
+                UserName = $"{wm.User.FirstName} {wm.User.LastName}",
                 UserEmail = wm.User.Email,
                 Role = wm.Role,
                 JoinedAt = wm.JoinedAt
