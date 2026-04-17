@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using SmartCollab.Core.DTOs;
@@ -23,6 +23,27 @@ public class FileService : IFileService
         _context = context;
         _environment = environment;
         _configuration = configuration;
+    }
+
+    public async Task<IEnumerable<FileResponseDto>> GetWorkspaceFilesAsync(Guid workspaceId)
+    {
+        var files = await _context.Files
+            .Where(f => f.WorkspaceId == workspaceId)
+            .Include(f => f.UploadedBy)
+            .OrderByDescending(f => f.UploadedAt)
+            .Select(f => new FileResponseDto
+            {
+                Id = f.Id,
+                FileName = f.FileName,
+                FileSize = f.FileSize,
+                FormattedFileSize = FormatFileSize(f.FileSize),
+                MimeType = f.MimeType,
+                UploadedByName = f.UploadedBy != null ? f.UploadedBy.FirstName + " " + f.UploadedBy.LastName : "Unknown",
+                UploadedAt = f.UploadedAt
+            })
+            .ToListAsync();
+
+        return files;
     }
 
     public async Task<FileResponseDto?> UploadFileAsync(Guid workspaceId, Guid userId, IFormFile file)
@@ -64,19 +85,16 @@ public class FileService : IFileService
             .Reference(f => f.UploadedBy)
             .LoadAsync();
 
-        return MapToFileResponseDto(fileEntity);
-    }
-
-    public async Task<IEnumerable<FileResponseDto>> GetWorkspaceFilesAsync(Guid workspaceId)
-    {
-        var files = await _context.Files
-            .Where(f => f.WorkspaceId == workspaceId)
-            .Include(f => f.UploadedBy)
-            .OrderByDescending(f => f.UploadedAt)
-            .Select(f => MapToFileResponseDto(f))
-            .ToListAsync();
-
-        return files;
+        return new FileResponseDto
+        {
+            Id = fileEntity.Id,
+            FileName = fileEntity.FileName,
+            FileSize = fileEntity.FileSize,
+            FormattedFileSize = FormatFileSize(fileEntity.FileSize),
+            MimeType = fileEntity.MimeType,
+            UploadedByName = fileEntity.UploadedBy != null ? $"{fileEntity.UploadedBy.FirstName} {fileEntity.UploadedBy.LastName}" : "Unknown",
+            UploadedAt = fileEntity.UploadedAt
+        };
     }
 
     public async Task<FileDownloadDto?> DownloadFileAsync(Guid fileId, Guid userId)
@@ -123,6 +141,70 @@ public class FileService : IFileService
         return true;
     }
 
+    public async Task<IEnumerable<FileResponseDto>> UploadMultipleFilesAsync(Guid workspaceId, Guid userId, List<IFormFile> files)
+    {
+        var uploadedFiles = new List<FileResponseDto>();
+
+        foreach (var file in files)
+        {
+            var result = await UploadFileAsync(workspaceId, userId, file);
+            if (result != null)
+                uploadedFiles.Add(result);
+        }
+
+        return uploadedFiles;
+    }
+
+    public async Task<FileResponseDto?> GetFileMetadataAsync(Guid fileId)
+    {
+        var file = await _context.Files
+            .Include(f => f.UploadedBy)
+            .FirstOrDefaultAsync(f => f.Id == fileId);
+
+        if (file == null)
+            return null;
+
+        return new FileResponseDto
+        {
+            Id = file.Id,
+            FileName = file.FileName,
+            FileSize = file.FileSize,
+            FormattedFileSize = FormatFileSize(file.FileSize),
+            MimeType = file.MimeType,
+            UploadedByName = file.UploadedBy != null ? $"{file.UploadedBy.FirstName} {file.UploadedBy.LastName}" : "Unknown",
+            UploadedAt = file.UploadedAt
+        };
+    }
+
+    public async Task<long> GetWorkspaceTotalStorageUsedAsync(Guid workspaceId)
+    {
+        return await _context.Files
+            .Where(f => f.WorkspaceId == workspaceId)
+            .SumAsync(f => f.FileSize);
+    }
+
+    public async Task<IEnumerable<FileResponseDto>> GetFilesByTypeAsync(Guid workspaceId, string mimeType)
+    {
+        var files = await _context.Files
+            .Where(f => f.WorkspaceId == workspaceId && f.MimeType.StartsWith(mimeType))
+            .Include(f => f.UploadedBy)
+            .OrderByDescending(f => f.UploadedAt)
+            .Select(f => new FileResponseDto
+            {
+                Id = f.Id,
+                FileName = f.FileName,
+                FileSize = f.FileSize,
+                FormattedFileSize = FormatFileSize(f.FileSize),
+                MimeType = f.MimeType,
+                UploadedByName = f.UploadedBy != null ? f.UploadedBy.FirstName + " " + f.UploadedBy.LastName : "Unknown",
+                UploadedAt = f.UploadedAt
+            })
+            .ToListAsync();
+
+        return files;
+    }
+
+    // Private helper methods - STATIC to avoid EF Core translation issues
     private async Task<bool> IsUserWorkspaceAdmin(Guid workspaceId, Guid userId)
     {
         var member = await _context.WorkspaceMembers
@@ -131,27 +213,18 @@ public class FileService : IFileService
         return member != null && member.Role == "Admin";
     }
 
-    private FileResponseDto MapToFileResponseDto(FileEntity file)
+    private static string FormatFileSize(long bytes)
     {
         string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = file.FileSize;
+        double len = bytes;
         int order = 0;
+
         while (len >= 1024 && order < sizes.Length - 1)
         {
             order++;
             len = len / 1024;
         }
-        var formattedSize = $"{len:0.##} {sizes[order]}";
 
-        return new FileResponseDto
-        {
-            Id = file.Id,
-            FileName = file.FileName,
-            FileSize = file.FileSize,
-            FormattedFileSize = formattedSize,
-            MimeType = file.MimeType,
-            UploadedByName = $"{file.UploadedBy.FirstName} {file.UploadedBy.LastName}",
-            UploadedAt = file.UploadedAt
-        };
+        return $"{len:0.##} {sizes[order]}";
     }
 }

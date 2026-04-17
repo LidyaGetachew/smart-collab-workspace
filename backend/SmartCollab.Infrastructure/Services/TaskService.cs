@@ -17,12 +17,30 @@ public class TaskService : ITaskService
 
     public async Task<IEnumerable<TaskResponseDto>> GetWorkspaceTasksAsync(Guid workspaceId)
     {
+        // Option 1: Use inline projection (MOST EFFICIENT)
         var tasks = await _context.Tasks
             .Where(t => t.WorkspaceId == workspaceId)
             .Include(t => t.AssignedTo)
             .Include(t => t.CreatedBy)
             .OrderByDescending(t => t.Priority)
-            .Select(t => MapToTaskResponseDto(t))
+            .Select(t => new TaskResponseDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Description = t.Description,
+                Status = t.Status,
+                Priority = t.Priority,
+                PriorityLabel = t.Priority == 1 ? "Low" : t.Priority == 2 ? "Medium" : "High",
+                AssignedToName = t.AssignedTo != null ? t.AssignedTo.FirstName + " " + t.AssignedTo.LastName : "Unassigned",
+                AssignedToId = t.AssignedToId,
+                CreatedByName = t.CreatedBy != null ? t.CreatedBy.FirstName + " " + t.CreatedBy.LastName : "Unknown",
+                CreatedById = t.CreatedById,
+                CreatedAt = t.CreatedAt,
+                DueDate = t.DueDate,
+                UpdatedAt = t.UpdatedAt,
+                IsOverdue = t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow && t.Status != "Done",
+                DaysUntilDue = t.DueDate.HasValue ? (int)(t.DueDate.Value - DateTime.UtcNow).TotalDays : 0
+            })
             .ToListAsync();
 
         return tasks;
@@ -46,6 +64,7 @@ public class TaskService : ITaskService
         _context.Tasks.Add(task);
         await _context.SaveChangesAsync();
 
+        // Load navigation properties
         await _context.Entry(task)
             .Reference(t => t.AssignedTo)
             .LoadAsync();
@@ -127,6 +146,136 @@ public class TaskService : ITaskService
         return true;
     }
 
+    public async Task<bool> BulkUpdateTasksAsync(Guid workspaceId, Guid userId, BulkTaskUpdateDto dto)
+    {
+        var isAdmin = await IsUserWorkspaceAdmin(workspaceId, userId);
+
+        if (!isAdmin)
+            return false;
+
+        var tasks = await _context.Tasks
+            .Where(t => dto.TaskIds.Contains(t.Id) && t.WorkspaceId == workspaceId)
+            .ToListAsync();
+
+        foreach (var task in tasks)
+        {
+            if (!string.IsNullOrEmpty(dto.Status))
+                task.Status = dto.Status;
+
+            if (dto.Priority.HasValue)
+                task.Priority = dto.Priority.Value;
+
+            if (dto.AssignedToId.HasValue)
+                task.AssignedToId = dto.AssignedToId;
+
+            task.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<PaginatedTaskResponseDto> GetFilteredTasksAsync(Guid workspaceId, TaskFilterDto filter)
+    {
+        var query = _context.Tasks
+            .Where(t => t.WorkspaceId == workspaceId)
+            .Include(t => t.AssignedTo)
+            .Include(t => t.CreatedBy)
+            .AsQueryable();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(filter.Status))
+            query = query.Where(t => t.Status == filter.Status);
+
+        if (filter.Priority.HasValue)
+            query = query.Where(t => t.Priority == filter.Priority.Value);
+
+        if (filter.AssignedToId.HasValue)
+            query = query.Where(t => t.AssignedToId == filter.AssignedToId.Value);
+
+        if (filter.DueDateFrom.HasValue)
+            query = query.Where(t => t.DueDate >= filter.DueDateFrom.Value);
+
+        if (filter.DueDateTo.HasValue)
+            query = query.Where(t => t.DueDate <= filter.DueDateTo.Value);
+
+        if (!string.IsNullOrEmpty(filter.SearchTerm))
+        {
+            query = query.Where(t =>
+                t.Title.Contains(filter.SearchTerm) ||
+                t.Description.Contains(filter.SearchTerm));
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var tasks = await query
+            .OrderByDescending(t => t.Priority)
+            .ThenBy(t => t.CreatedAt)
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .Select(t => new TaskResponseDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Description = t.Description,
+                Status = t.Status,
+                Priority = t.Priority,
+                PriorityLabel = t.Priority == 1 ? "Low" : t.Priority == 2 ? "Medium" : "High",
+                AssignedToName = t.AssignedTo != null ? t.AssignedTo.FirstName + " " + t.AssignedTo.LastName : "Unassigned",
+                AssignedToId = t.AssignedToId,
+                CreatedByName = t.CreatedBy != null ? t.CreatedBy.FirstName + " " + t.CreatedBy.LastName : "Unknown",
+                CreatedById = t.CreatedById,
+                CreatedAt = t.CreatedAt,
+                DueDate = t.DueDate,
+                UpdatedAt = t.UpdatedAt,
+                IsOverdue = t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow && t.Status != "Done",
+                DaysUntilDue = t.DueDate.HasValue ? (int)(t.DueDate.Value - DateTime.UtcNow).TotalDays : 0
+            })
+            .ToListAsync();
+
+        return new PaginatedTaskResponseDto
+        {
+            Tasks = tasks,
+            TotalCount = totalCount,
+            Page = filter.Page,
+            PageSize = filter.PageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)filter.PageSize)
+        };
+    }
+
+    public async Task<IEnumerable<TaskResponseDto>> GetUserTasksAsync(Guid userId)
+    {
+        var tasks = await _context.Tasks
+            .Where(t => t.AssignedToId == userId)
+            .Include(t => t.AssignedTo)
+            .Include(t => t.CreatedBy)
+            .Include(t => t.Workspace)
+            .OrderByDescending(t => t.Priority)
+            .ThenBy(t => t.DueDate)
+            .Select(t => new TaskResponseDto
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Description = t.Description,
+                Status = t.Status,
+                Priority = t.Priority,
+                PriorityLabel = t.Priority == 1 ? "Low" : t.Priority == 2 ? "Medium" : "High",
+                AssignedToName = t.AssignedTo != null ? t.AssignedTo.FirstName + " " + t.AssignedTo.LastName : "Unassigned",
+                AssignedToId = t.AssignedToId,
+                CreatedByName = t.CreatedBy != null ? t.CreatedBy.FirstName + " " + t.CreatedBy.LastName : "Unknown",
+                CreatedById = t.CreatedById,
+                CreatedAt = t.CreatedAt,
+                DueDate = t.DueDate,
+                UpdatedAt = t.UpdatedAt,
+                IsOverdue = t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow && t.Status != "Done",
+                DaysUntilDue = t.DueDate.HasValue ? (int)(t.DueDate.Value - DateTime.UtcNow).TotalDays : 0
+            })
+            .ToListAsync();
+
+        return tasks;
+    }
+
+    // Private helper methods
     private async Task<bool> IsUserWorkspaceAdmin(Guid workspaceId, Guid userId)
     {
         var member = await _context.WorkspaceMembers
@@ -141,10 +290,12 @@ public class TaskService : ITaskService
             .AnyAsync(wm => wm.WorkspaceId == workspaceId && wm.UserId == userId);
     }
 
-    private TaskResponseDto MapToTaskResponseDto(TaskItem task)
+    // Make this static - KEY FIX
+    private static TaskResponseDto MapToTaskResponseDto(TaskItem task)
     {
         var dueDate = task.DueDate;
         var isOverdue = dueDate.HasValue && dueDate.Value < DateTime.UtcNow && task.Status != "Done";
+        var daysUntilDue = dueDate.HasValue ? (int)(dueDate.Value - DateTime.UtcNow).TotalDays : 0;
 
         return new TaskResponseDto
         {
@@ -156,10 +307,13 @@ public class TaskService : ITaskService
             PriorityLabel = task.Priority == 1 ? "Low" : task.Priority == 2 ? "Medium" : "High",
             AssignedToName = task.AssignedTo != null ? $"{task.AssignedTo.FirstName} {task.AssignedTo.LastName}" : "Unassigned",
             AssignedToId = task.AssignedToId,
-            CreatedByName = $"{task.CreatedBy.FirstName} {task.CreatedBy.LastName}",
+            CreatedByName = task.CreatedBy != null ? $"{task.CreatedBy.FirstName} {task.CreatedBy.LastName}" : "Unknown",
+            CreatedById = task.CreatedById,
             CreatedAt = task.CreatedAt,
             DueDate = task.DueDate,
-            IsOverdue = isOverdue
+            UpdatedAt = task.UpdatedAt,
+            IsOverdue = isOverdue,
+            DaysUntilDue = daysUntilDue
         };
     }
 }
