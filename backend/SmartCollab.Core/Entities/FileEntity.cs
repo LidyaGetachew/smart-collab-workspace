@@ -1,10 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace SmartCollab.Core.Entities
+namespace SmartCollab.Core.Entities;
+
+public class FileEntity
 {
-    internal class FileEntity
-    {
-    }
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public string FileName { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string MimeType { get; set; } = string.Empty;
+    public Guid WorkspaceId { get; set; }
+    public Guid UploadedById { get; set; }
+    public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation properties
+    public virtual Workspace Workspace { get; set; } = null!;
+    public virtual User UploadedBy { get; set; } = null!;
 }
