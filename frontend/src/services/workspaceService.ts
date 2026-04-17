@@ -38,4 +38,18 @@ export const workspaceService = {
     const response = await api.get(`/workspaces/${workspaceId}/members`);
     return response.data;
   },
+   async removeMember(workspaceId: string, memberId: string): Promise<void> {
+    const response = await api.delete(`/workspaces/${workspaceId}/members/${memberId}`);
+    return response.data;
+  },
+
+  async updateMemberRole(workspaceId: string, memberId: string, role: string): Promise<void> {
+    const response = await api.put(`/workspaces/${workspaceId}/members/${memberId}/role`, { role });
+    return response.data;
+  },
+
+  async getWorkspaceInfo(workspaceId: string): Promise<{ name: string; description: string }> {
+    const response = await api.get(`/workspaces/${workspaceId}`);
+    return response.data;
+  },
 };
