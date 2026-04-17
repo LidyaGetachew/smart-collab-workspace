@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: smartcollab_postgres
+    environment:
+      POSTGRES_DB: smartcollab_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin@123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - smartcollab_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: smartcollab_backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=smartcollab_db;Username=postgres;Password=admin@123
+      - Jwt__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDotNet9!
+      - Jwt__Issuer=SmartCollabAPI
+      - Jwt__Audience=SmartCollabClient
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - smartcollab_network
+
+  frontend:
+    build: ./frontend
+    container_name: smartcollab_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - smartcollab_network
+
+volumes:
+  postgres_data:
+
+networks:
+  smartcollab_network:
+    driver: bridge
