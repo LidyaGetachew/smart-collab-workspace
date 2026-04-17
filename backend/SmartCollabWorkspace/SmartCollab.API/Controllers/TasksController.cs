@@ -42,10 +42,6 @@ public class TasksController : ControllerBase
             return Forbid();
 
         var task = await _taskService.CreateTaskAsync(workspaceId, userId, dto);
-
-        if (task == null)
-            return BadRequest(new { message = "Failed to create task" });
-
         return Ok(task);
     }
 
@@ -58,6 +54,22 @@ public class TasksController : ControllerBase
             return Forbid();
 
         var task = await _taskService.UpdateTaskAsync(taskId, userId, dto);
+
+        if (task == null)
+            return NotFound(new { message = "Task not found" });
+
+        return Ok(task);
+    }
+
+    [HttpPatch("{taskId}/status")]
+    public async Task<IActionResult> UpdateTaskStatus(Guid workspaceId, Guid taskId, [FromBody] string status)
+    {
+        var userId = _authService.GetCurrentUserId();
+
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
+            return Forbid();
+
+        var task = await _taskService.UpdateTaskStatusAsync(taskId, userId, status);
 
         if (task == null)
             return NotFound(new { message = "Task not found" });

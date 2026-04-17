@@ -32,10 +32,6 @@ public class WorkspacesController : ControllerBase
     {
         var userId = _authService.GetCurrentUserId();
         var workspace = await _workspaceService.CreateWorkspaceAsync(userId, dto);
-
-        if (workspace == null)
-            return BadRequest(new { message = "Failed to create workspace" });
-
         return Ok(workspace);
     }
 
