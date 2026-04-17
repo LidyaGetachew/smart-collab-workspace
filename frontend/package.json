@@ -26,10 +26,11 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "concurrently \"npx @tailwindcss/cli -i ./src/input.css -o ./src/index.css --watch\" \"react-scripts start\"",
-    "build": "npx @tailwindcss/cli -i ./src/input.css -o ./src/index.css && react-scripts build",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "postinstall": "patch-package"
   },
   "eslintConfig": {
     "extends": [
@@ -50,11 +51,10 @@
     ]
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.2.2",
-    "autoprefixer": "^10.5.0",
-    "concurrently": "^9.2.1",
+    "autoprefixer": "^10.4.19",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.10",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^3.4.3"
   },
   "overrides": {
     "nth-check": "^2.1.1",

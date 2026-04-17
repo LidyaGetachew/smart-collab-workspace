@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { workspaceService, WorkspaceMember } from '../services/workspaceService';
-import { taskService, Task } from '../services/taskService';
 import { fileService, FileItem } from '../services/fileService';
 import KanbanBoard from '../components/KanbanBoard';
 import toast from 'react-hot-toast';
@@ -22,6 +21,7 @@ const WorkspaceDetail: React.FC = () => {
       loadMembers();
       loadFiles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadMembers = async () => {

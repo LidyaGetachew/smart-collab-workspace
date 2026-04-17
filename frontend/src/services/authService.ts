@@ -13,6 +13,7 @@ export interface LoginData {
 }
 
 export interface User {
+  id:string;
   token: string;
   email: string;
   firstName: string;
