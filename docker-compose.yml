@@ -25,13 +25,13 @@ services:
     container_name: smartcollab_backend
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8000
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=smartcollab_db;Username=postgres;Password=admin@123
       - Jwt__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDotNet9!
       - Jwt__Issuer=SmartCollabAPI
       - Jwt__Audience=SmartCollabClient
     ports:
-      - "5000:8080"
-      - "5001:8081"
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,6 +47,8 @@ services:
       - backend
     networks:
       - smartcollab_network
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api
 
 volumes:
   postgres_data:

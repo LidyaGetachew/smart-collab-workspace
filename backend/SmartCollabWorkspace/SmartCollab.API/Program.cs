@@ -1,21 +1,56 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using SmartCollab.Core.Interfaces;
-
-// OpenAPI models removed to avoid direct dependency on Microsoft.OpenApi types
 using SmartCollab.Infrastructure;
 using SmartCollab.Infrastructure.Data;
 using SmartCollab.Infrastructure.Services;
 using System.Text;
+using Microsoft.OpenApi.Models;  // Add this for OpenApiInfo
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.UseUrls("http://localhost:8000", "https://localhost:8001");
 
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Swagger configuration - keep default generation to avoid OpenAPI model type conflicts
-builder.Services.AddSwaggerGen();
+// Swagger configuration for Swashbuckle 7.x
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Smart Collaboration Workspace API",
+        Version = "v1",
+        Description = "API for Smart Collaboration & Research Workspace"
+    });
+
+    // Optional: Add JWT authentication to Swagger
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer' followed by your token"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Add Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -23,6 +58,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<IFileService, FileService>();
 // Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 
@@ -67,10 +103,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "SmartCollab API v1");
+    });
 }
 
-app.UseHttpsRedirection();
 app.UseCors("ReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -82,5 +120,8 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
 }
-
+Console.WriteLine($"Server running on:");
+Console.WriteLine($"HTTP: http://localhost:8000");
+Console.WriteLine($"HTTPS: https://localhost:8001");
+Console.WriteLine($"Swagger: http://localhost:8000/swagger");
 app.Run();
