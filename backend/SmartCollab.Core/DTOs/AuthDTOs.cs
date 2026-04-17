@@ -38,6 +38,7 @@ public class AuthResponseDto
     public string Role { get; set; } = string.Empty;
 }
 
+
 public class ChangePasswordDto
 {
     [Required]

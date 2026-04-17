@@ -13,6 +13,7 @@ public class CreateWorkspaceDto
     public string Description { get; set; } = string.Empty;
 }
 
+
 public class UpdateWorkspaceDto
 {
     [Required]
@@ -23,6 +24,7 @@ public class UpdateWorkspaceDto
     [MaxLength(1000)]
     public string Description { get; set; } = string.Empty;
 }
+
 
 public class WorkspaceResponseDto
 {
