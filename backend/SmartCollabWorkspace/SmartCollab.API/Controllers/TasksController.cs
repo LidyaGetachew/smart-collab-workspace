@@ -92,4 +92,20 @@ public class TasksController : ControllerBase
 
         return Ok(new { message = "Task deleted successfully" });
     }
+
+    [HttpPost("{taskId}/comments")]
+    public async Task<IActionResult> AddComment(Guid workspaceId, Guid taskId, [FromBody] string content)
+    {
+        var userId = _authService.GetCurrentUserId();
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId)) return Forbid();
+        return Ok(await _taskService.AddCommentAsync(taskId, userId, content));
+    }
+
+    [HttpGet("{taskId}/comments")]
+    public async Task<IActionResult> GetComments(Guid workspaceId, Guid taskId)
+    {
+        var userId = _authService.GetCurrentUserId();
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId)) return Forbid();
+        return Ok(await _taskService.GetTaskCommentsAsync(taskId));
+    }
 }
