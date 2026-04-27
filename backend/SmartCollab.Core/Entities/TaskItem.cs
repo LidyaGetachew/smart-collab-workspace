@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Xml.Linq;
 
 namespace SmartCollab.Core.Entities;
 
@@ -19,5 +20,6 @@ public class TaskItem
     // Navigation properties
     public virtual Workspace Workspace { get; set; } = null!;
     public virtual User AssignedTo { get; set; } = null!;
-    public virtual User CreatedBy { get; set; } = null!;
+    public virtual User CreatedBy { get; set; } = null!
+    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 }
