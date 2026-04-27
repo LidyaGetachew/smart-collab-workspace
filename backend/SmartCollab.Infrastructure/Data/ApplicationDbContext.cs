@@ -15,6 +15,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<FileEntity> Files => Set<FileEntity>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -116,5 +118,13 @@ public class ApplicationDbContext : DbContext
                 .HasForeignKey(e => e.UploadedById)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+        modelBuilder.Entity<TaskItem>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasMany(x => x.Comments).WithOne(x => x.Task).HasForeignKey(x => x.TaskId);
+        });
+
+        modelBuilder.Entity<Comment>(e => e.HasKey(x => x.Id));
+        modelBuilder.Entity<ActivityLog>(e => e.HasKey(x => x.Id));
     }
 }

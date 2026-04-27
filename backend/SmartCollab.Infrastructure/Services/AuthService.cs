@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using SmartCollab.Core.DTOs;
 using SmartCollab.Core.Entities;
 using SmartCollab.Core.Interfaces;
@@ -30,9 +31,6 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto?> RegisterAsync(RegisterDto registerDto)
     {
-        if (await UserExistsAsync(registerDto.Email))
-            return null;
-
         var user = new User
         {
             Email = registerDto.Email,
@@ -42,12 +40,23 @@ public class AuthService : IAuthService
             Role = "Member"
         };
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-
-        return GenerateToken(user);
+        try
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return GenerateToken(user);
+        }
+        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
+        {
+            return null; // User already exists
+        }
     }
 
+    private bool IsDuplicateKeyException(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException postgresEx
+            && postgresEx.SqlState == "23505"; // Unique violation
+    }
     public async Task<AuthResponseDto?> LoginAsync(LoginDto loginDto)
     {
         var user = await _context.Users
