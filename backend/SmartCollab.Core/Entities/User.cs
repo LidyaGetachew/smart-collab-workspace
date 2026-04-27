@@ -11,8 +11,10 @@ public class User
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Role { get; set; } = "Member";
+    public string? AvatarUrl { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
+    public bool IsActive { get; set; } = true;
 
     // Navigation properties
     public virtual ICollection<Workspace> OwnedWorkspaces { get; set; } = new List<Workspace>();
@@ -20,4 +22,7 @@ public class User
     public virtual ICollection<TaskItem> AssignedTasks { get; set; } = new List<TaskItem>();
     public virtual ICollection<TaskItem> CreatedTasks { get; set; } = new List<TaskItem>();
     public virtual ICollection<FileEntity> UploadedFiles { get; set; } = new List<FileEntity>();
+    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    public virtual ICollection<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
+    public virtual ICollection<ActivityLog> Activities { get; set; } = new List<ActivityLog>();
 }

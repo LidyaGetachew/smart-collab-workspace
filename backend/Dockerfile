@@ -6,22 +6,19 @@ COPY SmartCollab.API/*.csproj SmartCollab.API/
 COPY SmartCollab.Core/*.csproj SmartCollab.Core/
 COPY SmartCollab.Infrastructure/*.csproj SmartCollab.Infrastructure/
 
-# Restore dependencies
+# Restore
 RUN dotnet restore SmartCollab.API/SmartCollab.API.csproj
 
-# Copy all source code
+# Copy all files
 COPY . .
 
-# Build and publish
+# Publish
 WORKDIR /src/SmartCollab.API
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
-# Runtime image
+# Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
-
-# Set environment variable for port
-ENV ASPNETCORE_URLS=http://+:8000
-
 COPY --from=build /app/publish .
+ENV ASPNETCORE_URLS=http://+:8000
 ENTRYPOINT ["dotnet", "SmartCollab.API.dll"]

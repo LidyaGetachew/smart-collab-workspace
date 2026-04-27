@@ -6,8 +6,11 @@ export interface FileItem {
   fileSize: number;
   formattedFileSize: string;
   mimeType: string;
+  fileIcon: string;
   uploadedByName: string;
+  uploadedById: string;
   uploadedAt: string;
+  uploadedAtRelative: string;
 }
 
 export const fileService = {
@@ -32,7 +35,9 @@ export const fileService = {
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', response.headers['content-disposition']?.split('filename=')[1] || 'file');
+    const contentDisposition = response.headers['content-disposition'];
+    const filename = contentDisposition?.split('filename=')[1]?.replace(/["']/g, '') || 'download';
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -41,5 +46,5 @@ export const fileService = {
 
   async delete(workspaceId: string, fileId: string): Promise<void> {
     await api.delete(`/workspaces/${workspaceId}/files/${fileId}`);
-  },
+  }
 };

@@ -1,8 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql;
 using SmartCollab.Core.DTOs;
 using SmartCollab.Core.Entities;
 using SmartCollab.Core.Interfaces;
@@ -19,50 +18,37 @@ public class AuthService : IAuthService
     private readonly IConfiguration _configuration;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuthService(
-        ApplicationDbContext context,
-        IConfiguration configuration,
-        IHttpContextAccessor httpContextAccessor)
+    public AuthService(ApplicationDbContext context, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _configuration = configuration;
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<AuthResponseDto?> RegisterAsync(RegisterDto registerDto)
+    public async Task<AuthResponseDto?> RegisterAsync(RegisterDto dto)
     {
+        if (await UserExistsAsync(dto.Email))
+            return null;
+
         var user = new User
         {
-            Email = registerDto.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
-            FirstName = registerDto.FirstName,
-            LastName = registerDto.LastName,
-            Role = "Member"
+            Email = dto.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            AvatarUrl = $"https://ui-avatars.com/api/?name={dto.FirstName}+{dto.LastName}&background=random"
         };
 
-        try
-        {
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return GenerateToken(user);
-        }
-        catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
-        {
-            return null; // User already exists
-        }
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        return GenerateToken(user);
     }
 
-    private bool IsDuplicateKeyException(DbUpdateException ex)
+    public async Task<AuthResponseDto?> LoginAsync(LoginDto dto)
     {
-        return ex.InnerException is PostgresException postgresEx
-            && postgresEx.SqlState == "23505"; // Unique violation
-    }
-    public async Task<AuthResponseDto?> LoginAsync(LoginDto loginDto)
-    {
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == loginDto.Email);
-
-        if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             return null;
 
         user.LastLoginAt = DateTime.UtcNow;
@@ -71,53 +57,72 @@ public class AuthService : IAuthService
         return GenerateToken(user);
     }
 
-    public async Task<bool> UserExistsAsync(string email)
+    public async Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordDto dto)
     {
-        return await _context.Users.AnyAsync(u => u.Email == email);
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null) return false;
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+            return false;
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<UserProfileDto?> GetUserProfileAsync(Guid userId)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null) return null;
+
+        return new UserProfileDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            FullName = $"{user.FirstName} {user.LastName}",
+            Role = user.Role,
+            AvatarUrl = user.AvatarUrl,
+            CreatedAt = user.CreatedAt,
+            LastLoginAt = user.LastLoginAt
+        };
     }
 
     public Guid GetCurrentUserId()
     {
-        var userIdClaim = _httpContextAccessor.HttpContext?.User
-            .FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim))
-            throw new UnauthorizedAccessException("User not authenticated");
-
-        return Guid.Parse(userIdClaim);
+        var claim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(claim, out var id) ? id : Guid.Empty;
     }
+
+    public async Task<bool> UserExistsAsync(string email)
+        => await _context.Users.AnyAsync(u => u.Email == email);
 
     private AuthResponseDto GenerateToken(User user)
     {
-        var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!);
-
-        var tokenDescriptor = new SecurityTokenDescriptor
+        var token = new JwtSecurityTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
-                new Claim(ClaimTypes.Role, user.Role),
-                new Claim("FirstName", user.FirstName),
-                new Claim("LastName", user.LastName)
+                new Claim(ClaimTypes.Role, user.Role)
             }),
             Expires = DateTime.UtcNow.AddDays(7),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
-        };
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        });
 
         return new AuthResponseDto
         {
-            Token = tokenHandler.WriteToken(token),
+            Id = user.Id,
+            Token = new JwtSecurityTokenHandler().WriteToken(token),
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Role = user.Role
+            Role = user.Role,
+            AvatarUrl = user.AvatarUrl
         };
     }
 }

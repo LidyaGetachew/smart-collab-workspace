@@ -7,7 +7,7 @@ public class WorkspaceMember
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public Guid WorkspaceId { get; set; }
     public Guid UserId { get; set; }
-    public string Role { get; set; } = "Member"; // Admin, Member
+    public string Role { get; set; } = "Member";
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties

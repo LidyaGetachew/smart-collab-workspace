@@ -25,7 +25,6 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> GetTasks(Guid workspaceId)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
@@ -33,11 +32,21 @@ public class TasksController : ControllerBase
         return Ok(tasks);
     }
 
+    [HttpGet("{taskId}")]
+    public async Task<IActionResult> GetTask(Guid workspaceId, Guid taskId)
+    {
+        var userId = _authService.GetCurrentUserId();
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
+            return Forbid();
+
+        var task = await _taskService.GetTaskByIdAsync(taskId);
+        return Ok(task);
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateTask(Guid workspaceId, [FromBody] CreateTaskDto dto)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
@@ -49,15 +58,10 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> UpdateTask(Guid workspaceId, Guid taskId, [FromBody] UpdateTaskDto dto)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
         var task = await _taskService.UpdateTaskAsync(taskId, userId, dto);
-
-        if (task == null)
-            return NotFound(new { message = "Task not found" });
-
         return Ok(task);
     }
 
@@ -65,15 +69,10 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> UpdateTaskStatus(Guid workspaceId, Guid taskId, [FromBody] string status)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
         var task = await _taskService.UpdateTaskStatusAsync(taskId, userId, status);
-
-        if (task == null)
-            return NotFound(new { message = "Task not found" });
-
         return Ok(task);
     }
 
@@ -81,31 +80,55 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> DeleteTask(Guid workspaceId, Guid taskId)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
         var result = await _taskService.DeleteTaskAsync(taskId, userId);
-
-        if (!result)
-            return NotFound(new { message = "Task not found" });
-
-        return Ok(new { message = "Task deleted successfully" });
+        if (!result) return NotFound();
+        return Ok(new { message = "Task deleted" });
     }
 
     [HttpPost("{taskId}/comments")]
-    public async Task<IActionResult> AddComment(Guid workspaceId, Guid taskId, [FromBody] string content)
+    public async Task<IActionResult> AddComment(Guid workspaceId, Guid taskId, [FromBody] CreateCommentDto dto)
     {
         var userId = _authService.GetCurrentUserId();
-        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId)) return Forbid();
-        return Ok(await _taskService.AddCommentAsync(taskId, userId, content));
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
+            return Forbid();
+
+        var comment = await _taskService.AddCommentAsync(taskId, userId, dto.Content);
+        return Ok(comment);
     }
 
     [HttpGet("{taskId}/comments")]
     public async Task<IActionResult> GetComments(Guid workspaceId, Guid taskId)
     {
         var userId = _authService.GetCurrentUserId();
-        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId)) return Forbid();
-        return Ok(await _taskService.GetTaskCommentsAsync(taskId));
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
+            return Forbid();
+
+        var comments = await _taskService.GetTaskCommentsAsync(taskId);
+        return Ok(comments);
+    }
+
+    [HttpDelete("{taskId}/comments/{commentId}")]
+    public async Task<IActionResult> DeleteComment(Guid workspaceId, Guid taskId, Guid commentId)
+    {
+        var userId = _authService.GetCurrentUserId();
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
+            return Forbid();
+
+        var result = await _taskService.DeleteCommentAsync(commentId, userId);
+        return Ok(new { success = result });
+    }
+
+    [HttpGet("{taskId}/activities")]
+    public async Task<IActionResult> GetActivities(Guid workspaceId, Guid taskId)
+    {
+        var userId = _authService.GetCurrentUserId();
+        if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
+            return Forbid();
+
+        var activities = await _taskService.GetTaskActivitiesAsync(taskId);
+        return Ok(activities);
     }
 }

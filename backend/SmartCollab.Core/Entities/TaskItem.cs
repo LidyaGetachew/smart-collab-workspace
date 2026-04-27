@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Xml.Linq;
+using System.Collections.Generic;
 
 namespace SmartCollab.Core.Entities;
 
@@ -16,10 +16,12 @@ public class TaskItem
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? DueDate { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
 
     // Navigation properties
     public virtual Workspace Workspace { get; set; } = null!;
     public virtual User AssignedTo { get; set; } = null!;
-    public virtual User CreatedBy { get; set; } = null!
+    public virtual User CreatedBy { get; set; } = null!;
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    public virtual ICollection<ActivityLog> Activities { get; set; } = new List<ActivityLog>();
 }

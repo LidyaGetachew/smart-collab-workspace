@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (data: LoginData) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
 }
@@ -23,18 +23,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUser(authService.getCurrentUser());
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
     setLoading(false);
   }, []);
 
-  const login = async (data: LoginData) => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await authService.login(data);
+      const response = await authService.login({ email, password });
       authService.setUser(response);
       setUser(response);
-      toast.success('Login successful!');
+      toast.success(`Welcome back, ${response.firstName}!`);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      const message = error.response?.data?.message || error.response?.data || 'Login failed';
+      toast.error(message);
       throw error;
     }
   };
@@ -44,9 +46,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authService.register(data);
       authService.setUser(response);
       setUser(response);
-      toast.success('Registration successful!');
+      toast.success(`Welcome to SmartCollab, ${response.firstName}!`);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      const message = error.response?.data?.message || error.response?.data || 'Registration failed';
+      toast.error(message);
       throw error;
     }
   };

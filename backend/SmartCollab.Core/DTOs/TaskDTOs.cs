@@ -16,7 +16,6 @@ public class CreateTaskDto
     public int Priority { get; set; } = 2;
 
     public Guid? AssignedToId { get; set; }
-
     public DateTime? DueDate { get; set; }
 }
 
@@ -31,21 +30,20 @@ public class UpdateTaskDto
     public string Description { get; set; } = string.Empty;
 
     [Required]
-    [RegularExpression("^(Todo|InProgress|Done)$", ErrorMessage = "Status must be Todo, InProgress, or Done")]
+    [RegularExpression("^(Todo|InProgress|Done)$")]
     public string Status { get; set; } = string.Empty;
 
     [Range(1, 3)]
     public int Priority { get; set; }
 
     public Guid? AssignedToId { get; set; }
-
     public DateTime? DueDate { get; set; }
 }
 
 public class UpdateTaskStatusDto
 {
     [Required]
-    [RegularExpression("^(Todo|InProgress|Done)$", ErrorMessage = "Status must be Todo, InProgress, or Done")]
+    [RegularExpression("^(Todo|InProgress|Done)$")]
     public string Status { get; set; } = string.Empty;
 }
 
@@ -57,8 +55,10 @@ public class TaskResponseDto
     public string Status { get; set; } = string.Empty;
     public int Priority { get; set; }
     public string PriorityLabel { get; set; } = string.Empty;
+    public string PriorityColor { get; set; } = string.Empty;
     public string AssignedToName { get; set; } = string.Empty;
     public Guid? AssignedToId { get; set; }
+    public string? AssignedToAvatar { get; set; }
     public string CreatedByName { get; set; } = string.Empty;
     public Guid CreatedById { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -67,76 +67,25 @@ public class TaskResponseDto
     public bool IsOverdue { get; set; }
     public int DaysUntilDue { get; set; }
     public int CommentCount { get; set; }
-}
-public class CommentDto
-{
-    public Guid Id { get; set; }
-    public string Content { get; set; } = string.Empty;
-    public Guid AuthorId { get; set; }
-    public string AuthorName { get; set; } = string.Empty;
-    public string? AuthorAvatar { get; set; }
-    public DateTime CreatedAt { get; set; }
-}
-
-public class DashboardStatsDto
-{
-    public int TotalTasks { get; set; }
-    public int CompletedTasks { get; set; }
-    public int InProgressTasks { get; set; }
-    public int TodoTasks { get; set; }
-    public double CompletionRate { get; set; }
-    public int HighPriorityTasks { get; set; }
-    public int OverdueTasks { get; set; }
-    public int TotalMembers { get; set; }
-    public int TotalFiles { get; set; }
-}
-public class TaskAssignmentDto
-{
-    [Required]
-    public Guid TaskId { get; set; }
-
-    [Required]
-    public Guid AssignedToId { get; set; }
+    public string? StatusIcon { get; set; }
 }
 
 public class BulkTaskUpdateDto
 {
-    [Required]
-    public List<Guid> TaskIds { get; set; } = new List<Guid>();
-
+    public List<Guid> TaskIds { get; set; } = new();
     public string? Status { get; set; }
-
     public int? Priority { get; set; }
-
     public Guid? AssignedToId { get; set; }
 }
 
 public class TaskFilterDto
 {
     public string? Status { get; set; }
-
     public int? Priority { get; set; }
-
     public Guid? AssignedToId { get; set; }
-
     public DateTime? DueDateFrom { get; set; }
-
     public DateTime? DueDateTo { get; set; }
-
     public string? SearchTerm { get; set; }
-
     public int Page { get; set; } = 1;
-
-    public int PageSize { get; set; } = 10;
-}
-
-public class PaginatedTaskResponseDto
-{
-    public IEnumerable<TaskResponseDto> Tasks { get; set; } = new List<TaskResponseDto>();
-    public int TotalCount { get; set; }
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages { get; set; }
-    public bool HasPreviousPage => Page > 1;
-    public bool HasNextPage => Page < TotalPages;
+    public int PageSize { get; set; } = 20;
 }

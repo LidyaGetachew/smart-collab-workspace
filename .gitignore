@@ -15,6 +15,7 @@ frontend/.env.local
 # IDE
 .vscode/
 .idea/
+.vs/
 *.suo
 *.user
 

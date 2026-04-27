@@ -7,34 +7,72 @@ export interface Task {
   status: string;
   priority: number;
   priorityLabel: string;
+  priorityColor: string;
   assignedToName: string;
   assignedToId?: string;
+  assignedToAvatar?: string;
   createdByName: string;
   createdById: string;
   createdAt: string;
   dueDate?: string;
   updatedAt?: string;
   isOverdue: boolean;
-  daysUntilDue?: number;
-  createdBy: string;
+  daysUntilDue: number;
+  commentCount: number;
+  statusIcon: string;
 }
 
-export interface CreateTaskData {
-  title: string;
-  description: string;
-  priority: number;
-  assignedToId?: string;      // Use ID instead of email
-  assignedToEmail?: string;    // Add this for email input
-  dueDate?: string;            // Add this for date input
+export interface Comment {
+  id: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar?: string;
+  createdAt: string;
+  timeAgo: string;
 }
 
-export interface UpdateTaskData {
-  title: string;
+export interface ActivityLog {
+  id: string;
+  action: string;
   description: string;
+  userName: string;
+  userAvatar?: string;
+  createdAt: string;
+  timeAgo: string;
+}
+
+export interface DashboardStats {
+  totalTasks: number;
+  completedTasks: number;
+  inProgressTasks: number;
+  todoTasks: number;
+  completionRate: number;
+  highPriorityTasks: number;
+  overdueTasks: number;
+  totalMembers: number;
+  totalFiles: number;
+  totalMessages: number;
+}
+
+export interface TaskStatistics {
   status: string;
-  priority: number;
-  assignedToId?: string;
-  dueDate?: string;
+  label: string;
+  count: number;
+  color: string;
+  percentage: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  action: string;
+  description: string;
+  userName: string;
+  userAvatar?: string;
+  taskTitle?: string;
+  timestamp: string;
+  timeAgo: string;
+  icon: string;
 }
 
 export const taskService = {
@@ -43,39 +81,61 @@ export const taskService = {
     return response.data;
   },
 
-  async create(workspaceId: string, data: CreateTaskData): Promise<Task> {
-    // Convert email to ID if needed (you'll need to fetch user ID by email)
-    const createData: any = {
-      title: data.title,
-      description: data.description,
-      priority: data.priority,
-    };
-    
-    if (data.dueDate) {
-      createData.dueDate = data.dueDate;
-    }
-    
-    if (data.assignedToId) {
-      createData.assignedToId = data.assignedToId;
-    }
-    
-    const response = await api.post(`/workspaces/${workspaceId}/tasks`, createData);
+  async getById(workspaceId: string, taskId: string): Promise<Task> {
+    const response = await api.get(`/workspaces/${workspaceId}/tasks/${taskId}`);
     return response.data;
   },
 
-  async update(workspaceId: string, taskId: string, data: UpdateTaskData): Promise<Task> {
+  async create(workspaceId: string, data: Partial<Task>): Promise<Task> {
+    const response = await api.post(`/workspaces/${workspaceId}/tasks`, data);
+    return response.data;
+  },
+
+  async update(workspaceId: string, taskId: string, data: Partial<Task>): Promise<Task> {
     const response = await api.put(`/workspaces/${workspaceId}/tasks/${taskId}`, data);
     return response.data;
   },
 
   async updateStatus(workspaceId: string, taskId: string, status: string): Promise<Task> {
-    const response = await api.patch(`/workspaces/${workspaceId}/tasks/${taskId}/status`, status, {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const response = await api.patch(`/workspaces/${workspaceId}/tasks/${taskId}/status`, status);
     return response.data;
   },
 
   async delete(workspaceId: string, taskId: string): Promise<void> {
     await api.delete(`/workspaces/${workspaceId}/tasks/${taskId}`);
   },
+
+  async getComments(workspaceId: string, taskId: string): Promise<Comment[]> {
+    const response = await api.get(`/workspaces/${workspaceId}/tasks/${taskId}/comments`);
+    return response.data;
+  },
+
+  async addComment(workspaceId: string, taskId: string, content: string): Promise<Comment> {
+    const response = await api.post(`/workspaces/${workspaceId}/tasks/${taskId}/comments`, { content });
+    return response.data;
+  },
+
+  async deleteComment(workspaceId: string, taskId: string, commentId: string): Promise<void> {
+    await api.delete(`/workspaces/${workspaceId}/tasks/${taskId}/comments/${commentId}`);
+  },
+
+  async getActivities(workspaceId: string, taskId: string): Promise<ActivityLog[]> {
+    const response = await api.get(`/workspaces/${workspaceId}/tasks/${taskId}/activities`);
+    return response.data;
+  },
+
+  async getDashboardStats(workspaceId: string): Promise<DashboardStats> {
+    const response = await api.get(`/workspaces/${workspaceId}/dashboard/stats`);
+    return response.data;
+  },
+
+  async getTaskStatistics(workspaceId: string): Promise<TaskStatistics[]> {
+    const response = await api.get(`/workspaces/${workspaceId}/dashboard/task-statistics`);
+    return response.data;
+  },
+
+  async getRecentActivities(workspaceId: string, limit: number = 10): Promise<RecentActivity[]> {
+    const response = await api.get(`/workspaces/${workspaceId}/dashboard/recent-activities?limit=${limit}`);
+    return response.data;
+  }
 };

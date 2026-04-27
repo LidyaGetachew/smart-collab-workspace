@@ -24,7 +24,6 @@ public class FilesController : ControllerBase
     public async Task<IActionResult> GetFiles(Guid workspaceId)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
@@ -36,15 +35,11 @@ public class FilesController : ControllerBase
     public async Task<IActionResult> UploadFile(Guid workspaceId, IFormFile file)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
         var result = await _fileService.UploadFileAsync(workspaceId, userId, file);
-
-        if (result == null)
-            return BadRequest(new { message = "Failed to upload file" });
-
+        if (result == null) return BadRequest(new { message = "Upload failed" });
         return Ok(result);
     }
 
@@ -52,31 +47,25 @@ public class FilesController : ControllerBase
     public async Task<IActionResult> DownloadFile(Guid workspaceId, Guid fileId)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
-        var file = await _fileService.DownloadFileAsync(fileId, userId);
+        var content = await _fileService.DownloadFileAsync(fileId, userId);
+        if (content == null) return NotFound();
 
-        if (file == null)
-            return NotFound(new { message = "File not found" });
-
-        return File(file.Content, file.ContentType, file.FileName);
+        var metadata = await _fileService.GetFileMetadataAsync(fileId);
+        return File(content, "application/octet-stream", metadata?.FileName ?? "file");
     }
 
     [HttpDelete("{fileId}")]
     public async Task<IActionResult> DeleteFile(Guid workspaceId, Guid fileId)
     {
         var userId = _authService.GetCurrentUserId();
-
         if (!await _workspaceService.IsUserInWorkspaceAsync(userId, workspaceId))
             return Forbid();
 
         var result = await _fileService.DeleteFileAsync(fileId, userId);
-
-        if (!result)
-            return NotFound(new { message = "File not found" });
-
-        return Ok(new { message = "File deleted successfully" });
+        if (!result) return NotFound();
+        return Ok(new { message = "File deleted" });
     }
 }

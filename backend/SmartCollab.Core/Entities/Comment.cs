@@ -11,7 +11,9 @@ public class Comment
     public string AuthorName { get; set; } = string.Empty;
     public string? AuthorAvatar { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
+    // Navigation properties
     public virtual TaskItem Task { get; set; } = null!;
     public virtual User Author { get; set; } = null!;
 }

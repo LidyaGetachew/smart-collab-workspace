@@ -20,6 +20,25 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4.0-management-alpine
+    container_name: smartcollab_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - smartcollab_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     container_name: smartcollab_backend
@@ -27,13 +46,33 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8000
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=smartcollab_db;Username=postgres;Password=admin@123
+      - ConnectionStrings__RabbitMQ=amqp://admin:admin123@rabbitmq:5672
       - Jwt__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDotNet9!
-      - Jwt__Issuer=SmartCollabAPI
-      - Jwt__Audience=SmartCollabClient
     ports:
       - "8000:8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - smartcollab_network
+
+  chatapi:
+    build: ./chat-api
+    container_name: smartcollab_chatapi
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8001
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=smartcollab_db;Username=postgres;Password=admin@123
+      - ConnectionStrings__RabbitMQ=amqp://admin:admin123@rabbitmq:5672
+      - Jwt__Key=YourSuperSecretKeyThatIsAtLeast32CharactersLongForDotNet9!
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     networks:
       - smartcollab_network
@@ -45,13 +84,16 @@ services:
       - "3000:80"
     depends_on:
       - backend
+      - chatapi
     networks:
       - smartcollab_network
     environment:
-      - REACT_APP_API_URL=http://localhost:8000/api
+      - REACT_APP_API_URL=http://backend:8000/api
+      - REACT_APP_CHAT_URL=http://chatapi:8001
 
 volumes:
   postgres_data:
+  rabbitmq_data:
 
 networks:
   smartcollab_network:

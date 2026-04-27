@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace SmartCollab.Core.DTOs;
 
@@ -31,43 +31,39 @@ public class LoginDto
 
 public class AuthResponseDto
 {
+    public Guid Id { get; set; }
     public string Token { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+}
+public class UserProfileDto
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? LastLoginAt { get; set; }
+    public int WorkspaceCount { get; set; }
+    public int TaskCount { get; set; }
 }
 
-
+public class UpdateUserProfileDto
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+}
 public class ChangePasswordDto
 {
     [Required]
     public string CurrentPassword { get; set; } = string.Empty;
-
-    [Required]
-    [MinLength(6)]
-    public string NewPassword { get; set; } = string.Empty;
-
-    [Required]
-    [Compare("NewPassword")]
-    public string ConfirmNewPassword { get; set; } = string.Empty;
-}
-
-public class ForgotPasswordDto
-{
-    [Required]
-    [EmailAddress]
-    public string Email { get; set; } = string.Empty;
-}
-
-public class ResetPasswordDto
-{
-    [Required]
-    public string Token { get; set; } = string.Empty;
-
-    [Required]
-    [EmailAddress]
-    public string Email { get; set; } = string.Empty;
 
     [Required]
     [MinLength(6)]

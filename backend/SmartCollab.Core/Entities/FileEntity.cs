@@ -9,6 +9,7 @@ public class FileEntity
     public string FilePath { get; set; } = string.Empty;
     public long FileSize { get; set; }
     public string MimeType { get; set; } = string.Empty;
+    public string? FileHash { get; set; }
     public Guid WorkspaceId { get; set; }
     public Guid UploadedById { get; set; }
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;

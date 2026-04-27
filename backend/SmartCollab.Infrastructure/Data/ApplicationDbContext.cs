@@ -5,17 +5,15 @@ namespace SmartCollab.Infrastructure.Data;
 
 public class ApplicationDbContext : DbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
-    public DbSet<FileEntity> Files => Set<FileEntity>();
     public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<FileEntity> Files => Set<FileEntity>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -46,25 +44,14 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // WorkspaceMember configuration - FIXED
+        // WorkspaceMember configuration
         modelBuilder.Entity<WorkspaceMember>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.ToTable("WorkspaceMembers"); // Explicit table name
+            entity.ToTable("WorkspaceMembers");
+            entity.HasIndex(e => new { e.WorkspaceId, e.UserId }).IsUnique();
+            entity.Property(e => e.Role).HasDefaultValue("Member");
 
-            // Composite unique index to prevent duplicate members
-            entity.HasIndex(e => new { e.WorkspaceId, e.UserId })
-                .IsUnique()
-                .HasDatabaseName("IX_WorkspaceMembers_Workspace_User");
-
-            entity.Property(e => e.Role)
-                .HasDefaultValue("Member")
-                .HasMaxLength(50);
-
-            entity.Property(e => e.JoinedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-            // Relationships
             entity.HasOne(e => e.Workspace)
                 .WithMany(e => e.Members)
                 .HasForeignKey(e => e.WorkspaceId)
@@ -76,13 +63,13 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // TaskItem configuration
+        // Task configuration
         modelBuilder.Entity<TaskItem>(entity =>
         {
             entity.HasKey(e => e.Id);
             entity.ToTable("Tasks");
             entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Status).HasDefaultValue("Todo").HasMaxLength(50);
+            entity.Property(e => e.Status).HasDefaultValue("Todo");
             entity.Property(e => e.Priority).HasDefaultValue(2);
 
             entity.HasOne(e => e.Workspace)
@@ -101,7 +88,24 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // FileEntity configuration
+        // Comment configuration
+        modelBuilder.Entity<Comment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Content).IsRequired().HasMaxLength(1000);
+
+            entity.HasOne(e => e.Task)
+                .WithMany(e => e.Comments)
+                .HasForeignKey(e => e.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Author)
+                .WithMany(e => e.Comments)
+                .HasForeignKey(e => e.AuthorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // File configuration
         modelBuilder.Entity<FileEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -116,15 +120,50 @@ public class ApplicationDbContext : DbContext
             entity.HasOne(e => e.UploadedBy)
                 .WithMany(e => e.UploadedFiles)
                 .HasForeignKey(e => e.UploadedById)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-        modelBuilder.Entity<TaskItem>(e =>
-        {
-            e.HasKey(x => x.Id);
-            e.HasMany(x => x.Comments).WithOne(x => x.Task).HasForeignKey(x => x.TaskId);
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<Comment>(e => e.HasKey(x => x.Id));
-        modelBuilder.Entity<ActivityLog>(e => e.HasKey(x => x.Id));
+        // ChatMessage configuration
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.WorkspaceId);
+            entity.HasIndex(e => e.SentAt);
+            entity.Property(e => e.Message).IsRequired();
+            entity.Property(e => e.MessageType).HasDefaultValue("text");
+
+            entity.HasOne(e => e.Workspace)
+                .WithMany(e => e.ChatMessages)
+                .HasForeignKey(e => e.WorkspaceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany(e => e.ChatMessages)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ActivityLog configuration
+        modelBuilder.Entity<ActivityLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.WorkspaceId);
+            entity.HasIndex(e => e.CreatedAt);
+
+            entity.HasOne(e => e.Workspace)
+                .WithMany(e => e.Activities)
+                .HasForeignKey(e => e.WorkspaceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany(e => e.Activities)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Task)
+                .WithMany(e => e.Activities)
+                .HasForeignKey(e => e.TaskId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
     }
 }

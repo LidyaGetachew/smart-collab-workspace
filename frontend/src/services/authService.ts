@@ -1,5 +1,15 @@
 import api from './api';
 
+export interface User {
+  id: string;
+  token: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  avatarUrl?: string;
+}
+
 export interface RegisterData {
   email: string;
   password: string;
@@ -10,15 +20,6 @@ export interface RegisterData {
 export interface LoginData {
   email: string;
   password: string;
-}
-
-export interface User {
-  id:string;
-  token: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
 }
 
 export const authService = {
@@ -46,4 +47,13 @@ export const authService = {
     localStorage.setItem('token', user.token);
     localStorage.setItem('user', JSON.stringify(user));
   },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await api.post('/auth/change-password', { currentPassword, newPassword, confirmNewPassword: newPassword });
+  },
+
+  async getProfile(): Promise<User> {
+    const response = await api.get('/auth/profile');
+    return response.data;
+  }
 };
