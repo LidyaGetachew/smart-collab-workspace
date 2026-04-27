@@ -275,6 +275,46 @@ public class TaskService : ITaskService
         return tasks;
     }
 
+    public async Task<CommentDto?> AddCommentAsync(Guid taskId, Guid userId, string content)
+    {
+        var task = await _context.Tasks.Include(t => t.Workspace).FirstOrDefaultAsync(t => t.Id == taskId);
+        if (task == null) return null;
+
+        var user = await _context.Users.FindAsync(userId);
+        var comment = new Comment
+        {
+            Content = content,
+            TaskId = taskId,
+            AuthorId = userId,
+            AuthorName = $"{user?.FirstName} {user?.LastName}"
+        };
+        _context.Comments.Add(comment);
+        await _context.SaveChangesAsync();
+
+        return new CommentDto
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            AuthorId = comment.AuthorId,
+            AuthorName = comment.AuthorName,
+            CreatedAt = comment.CreatedAt
+        };
+    }
+
+    public async Task<IEnumerable<CommentDto>> GetTaskCommentsAsync(Guid taskId)
+    {
+        return await _context.Comments
+            .Where(c => c.TaskId == taskId)
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => new CommentDto
+            {
+                Id = c.Id,
+                Content = c.Content,
+                AuthorId = c.AuthorId,
+                AuthorName = c.AuthorName,
+                CreatedAt = c.CreatedAt
+            }).ToListAsync();
+    }
     // Private helper methods
     private async Task<bool> IsUserWorkspaceAdmin(Guid workspaceId, Guid userId)
     {
