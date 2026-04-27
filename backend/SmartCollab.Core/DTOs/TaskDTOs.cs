@@ -66,8 +66,30 @@ public class TaskResponseDto
     public DateTime? UpdatedAt { get; set; }
     public bool IsOverdue { get; set; }
     public int DaysUntilDue { get; set; }
+    public int CommentCount { get; set; }
+}
+public class CommentDto
+{
+    public Guid Id { get; set; }
+    public string Content { get; set; } = string.Empty;
+    public Guid AuthorId { get; set; }
+    public string AuthorName { get; set; } = string.Empty;
+    public string? AuthorAvatar { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
+public class DashboardStatsDto
+{
+    public int TotalTasks { get; set; }
+    public int CompletedTasks { get; set; }
+    public int InProgressTasks { get; set; }
+    public int TodoTasks { get; set; }
+    public double CompletionRate { get; set; }
+    public int HighPriorityTasks { get; set; }
+    public int OverdueTasks { get; set; }
+    public int TotalMembers { get; set; }
+    public int TotalFiles { get; set; }
+}
 public class TaskAssignmentDto
 {
     [Required]
