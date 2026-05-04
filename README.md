@@ -67,43 +67,108 @@ graph TD
 | 📊 **Dashboard** | ✅ | Workspace analytics & task statistics |
 | 📱 **Responsive UI** | ✅ | Modern, mobile-friendly design with Tailwind CSS |
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+ (for local development)
-- .NET 9 SDK (for local development)
+## 🛠️ Installation & Setup Guide
 
-### Run with Docker (Recommended)
+Follow these steps to get the project running on your local machine.
 
+### 1. Prerequisites
+Ensure you have the following installed:
+- **Node.js** (v18 or higher)
+- **.NET 9 SDK**
+- **PostgreSQL** (v16 or higher)
+- **Docker Desktop** (optional, but recommended for RabbitMQ)
+- **Git**
+
+---
+
+### 2. Clone the Repository
 ```bash
-# Clone repository
 git clone https://github.com/LidyaGetachew/smart-collab-workspace.git
 cd smart-collab-workspace
-
-# Start all services
-docker-compose up --build
-
-# Access application
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000/swagger
-# RabbitMQ Management: http://localhost:15672 (guest/guest)
 ```
 
-### Local Development
+---
 
+### 3. Database Setup (PostgreSQL)
+1. Open your PostgreSQL tool (like pgAdmin or psql).
+2. Create a new database named `smartcollab_db`.
+3. The default connection string in `appsettings.json` is:
+   `Host=localhost;Database=smartcollab_db;Username=postgres;Password=admin@123`
+   > [!NOTE]
+   > If your PostgreSQL password is different, update it in `backend/SmartCollabWorkspace/SmartCollab.API/appsettings.json`.
+
+---
+
+### 4. Running the Backend (API & Real-time Hub)
+Open a terminal and run:
 ```bash
-# Terminal 1 - Backend
-cd backend/SmartCollab.API
+# Navigate to the API project
+cd backend/SmartCollabWorkspace/SmartCollab.API
+
+# Restore dependencies
 dotnet restore
-dotnet ef database update
+
+# Run the application
 dotnet run --urls "http://localhost:8000"
+```
+The API will be available at `http://localhost:8000`. You can view the Swagger documentation at `http://localhost:8000/swagger`.
 
-# Terminal 2 - Frontend
+> [!TIP]
+> The database tables will be created automatically on the first run thanks to `dbContext.Database.EnsureCreatedAsync()`.
+
+---
+
+### 5. Running the Frontend (React App)
+Open a **new** terminal and run:
+```bash
+# Navigate to the frontend directory
 cd frontend
-npm install
-npm start
 
-# Terminal 3 - RabbitMQ (Docker)
+# Install dependencies
+npm install
+
+# Start the development server
+npm start
+```
+The frontend will open automatically at `http://localhost:3000`.
+
+---
+
+### 6. (Optional) Run RabbitMQ for Real-time Features
+The chat features use RabbitMQ for event streaming. The easiest way to run it is via Docker:
+```bash
 docker run -d --name smartcollab_rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:4.0-management-alpine
 ```
+*Login to management console at `http://localhost:15672` with `guest`/`guest`.*
+
+---
+
+## 🐳 Run Everything with Docker (One-Command)
+If you have Docker Compose installed, you can start the entire stack (Postgres, RabbitMQ, Backend, and Frontend) with one command:
+
+```bash
+docker-compose up --build
+```
+
+**Access Points:**
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://localhost:8000/swagger
+- **RabbitMQ:** http://localhost:15672
+
+---
+
+## ❓ Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **Database Connection Failed** | Ensure PostgreSQL is running and the credentials in `appsettings.json` match your local setup. |
+| **Port 3000 or 8000 already in use** | Stop any other processes running on these ports or change the ports in the respective config files. |
+| **Frontend can't connect to API** | Check `frontend/.env` to ensure `REACT_APP_API_URL` is set to `http://localhost:8000/api`. |
+| **SignalR / Chat not working** | Ensure RabbitMQ is running (Step 6) as the backend depends on it for message broadcasting. |
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
